@@ -1,0 +1,23 @@
+name: Creating the first issue
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  add-first-issue:
+    if: ${{ github.run_number == 1 }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/github-script@v3   
+        with:
+          github-token: ${{secrets.GITHUB_TOKEN}}
+          script: |
+            await github.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: 'Comment here to get started with the hands-on exercise',
+              body: "### Comment below - you can say anything \n We will all be using this repository today. Even though it's public right now, you will not be able to make changes until you're given the correct permissions. We've automated this process via the GitHub API and some fancy chatops. Once you comment, we will add you as a collaborator. \n\n  You'll also start to receive a lot of emails. (:exclamation:) You can slow these down immediately by clicking the 'Unwatch' button and selecting either the 'Not watching' or 'Ignoring' option."
+              })
+            

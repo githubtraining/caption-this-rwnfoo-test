@@ -1,0 +1,68 @@
+name: Add files
+
+# TODO: add if workflow_dispatch then issue_comment
+on:
+  issue_comment:
+    types: [created]
+
+jobs:
+  get-collaborators:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/github-script@v3
+        with:
+          github-token: ${{secrets.GITHUB_TOKEN}}
+          script: |
+            var fs = require('fs');
+            const query = `query ($owner: String!, $name: String!) {
+              repository(owner: $owner, name: $name) {
+                issues(first:100) {
+                  edges {
+                    node {
+                      author {
+                        login
+                      }
+                    }
+                  }
+                }
+              }
+            }`;
+            const variables = {
+              owner: context.repo.owner,
+              name: context.repo.repo,
+            }
+            const result = await github.graphql(query, variables)
+            console.log(JSON.stringify(result))
+            
+            const i = 1
+            
+            for (user of result.repository.issues.edges) {
+              let userLogin = user.node.author.login
+              let readFile = fs.readFileSync( './slide_template.md', {encoding:'utf8', flag:'r'} )
+              let readImages = fs.readFileSync( './slide_images.md', {encoding:'utf8', flag:'r'} )
+              
+              // Split slide_images into multiple lines
+              let imagesArray = readImages.split('\n')
+              let randomImage = imagesArray[Math.floor(Math.random() * imagesArray.length)]
+              let newFile = readFile.replace("IMAGE", randomImage)
+              
+              // Convert to base64
+              let bufferObj = Buffer.from(newFile, "utf8")
+              let base64String = bufferObj.toString("base64")
+              
+              // Create Files
+              await github.repos.createOrUpdateFileContents({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                path: `_slides/${i}-${userLogin}.md`,
+                message: 'Add student md file',
+                content: base64String,
+                'committer.name': context.repo.owner,
+                'committer.email': 'test@github.com',
+                'author.name': context.repo.owner,
+                'author.email': 'test@github.com' 
+              })
+              i=i+1
+            }
+            
